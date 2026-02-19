@@ -33,71 +33,20 @@ class SocketHandler {
         try {
           const { token, userType } = data;
           
-          // Handle demo tokens for development/testing
-          if (token === 'admin-demo-token' && userType === 'admin') {
-            socket.userId = 'demo-admin';
-            socket.userType = 'admin';
-            socket.digitalId = 'DEMO-ADMIN';
-            
-            this.connectedUsers.set('demo-admin', {
-              socketId: socket.id,
-              userType: 'admin',
-              digitalId: 'DEMO-ADMIN',
-              connectedAt: new Date(),
-              isDemoUser: true
-            });
-
-            socket.emit('authenticated', {
-              success: true,
-              userId: 'demo-admin',
-              userType: 'admin'
-            });
-
-            console.log('Demo admin authenticated');
-            
-            // Send current user count to admins
-            this.broadcastToAdmins('user_stats', {
-              totalConnected: this.connectedUsers.size,
-              onlineTourists: Array.from(this.connectedUsers.values()).filter(u => u.userType === 'tourist').length
-            });
-            return;
+          if (!token) {
+            return socket.emit('auth_error', { message: 'Authentication failed - Token missing' });
           }
-          
-          // Handle demo tokens for tourists
-          if (token === 'tourist-demo-token' && userType === 'tourist') {
-            const demoUserId = `demo-tourist-${socket.id.slice(-6)}`;
-            socket.userId = demoUserId;
-            socket.userType = 'tourist';
-            socket.digitalId = `DEMO-${socket.id.slice(-6)}`;
-            
-            this.connectedUsers.set(demoUserId, {
-              socketId: socket.id,
-              userType: 'tourist',
-              digitalId: socket.digitalId,
-              connectedAt: new Date(),
-              isDemoUser: true
-            });
 
-            socket.emit('authenticated', {
-              success: true,
-              userId: demoUserId,
-              userType: 'tourist'
-            });
-
-            console.log(`Demo tourist authenticated: ${demoUserId}`);
-            
-            // Send current user count to admins
-            this.broadcastToAdmins('user_stats', {
-              totalConnected: this.connectedUsers.size,
-              onlineTourists: Array.from(this.connectedUsers.values()).filter(u => u.userType === 'tourist').length
-            });
-            return;
-          }
-          
           // Handle real JWT tokens
-          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+          const secret = process.env.JWT_SECRET;
+          if (!secret) {
+            console.error('JWT_SECRET is not defined in environment');
+            return socket.emit('auth_error', { message: 'Server configuration error' });
+          }
+
+          const decoded = jwt.verify(token, secret);
           
-          socket.userId = decoded.userId;
+          socket.userId = decoded.id; // Correcting to decoded.id based on middleware patterns
           socket.userType = userType; // 'tourist' or 'admin'
           socket.digitalId = decoded.digitalId;
           
@@ -123,11 +72,7 @@ class SocketHandler {
           });
 
         } catch (error) {
-          // Only log authentication errors once per socket to avoid spam
-          if (!socket._authErrorLogged) {
-            console.log(`Socket authentication failed for ${socket.id}: Invalid token`);
-            socket._authErrorLogged = true;
-          }
+          console.error(`Socket authentication failed for ${socket.id}:`, error.message);
           socket.emit('auth_error', { message: 'Authentication failed - Invalid token' });
         }
       });

@@ -8,6 +8,9 @@ class VerificationService {
    */
   generateQRCodeData(user) {
     const timestamp = Date.now();
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET not configured');
+
     const qrData = {
       digitalId: user.digitalId,
       name: user.name,
@@ -16,45 +19,35 @@ class VerificationService {
       issuedAt: timestamp,
       expiresAt: timestamp + (24 * 60 * 60 * 1000), // Valid for 24 hours
       
-      // Security features
-      checksum: this.generateChecksum(user.digitalId, timestamp),
-      signature: this.generateSignature(user.digitalId, timestamp),
-      
-      // Verification URL
-      verifyUrl: `${process.env.API_BASE_URL}/api/verify/${user.digitalId}?token=${this.generateVerificationToken(user)}`
+      // Security feature: HMAC Signature for authenticity
+      signature: this.generateSignature(user.digitalId, timestamp, secret)
     };
 
     return JSON.stringify(qrData);
   }
 
   /**
-   * Generate cryptographic checksum for tamper detection
+   * Generate digital signature for authenticity using HMAC-SHA256
    */
-  generateChecksum(digitalId, timestamp) {
-    const data = `${digitalId}-${timestamp}-${process.env.JWT_SECRET}`;
-    return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16);
-  }
-
-  /**
-   * Generate digital signature for authenticity
-   */
-  generateSignature(digitalId, timestamp) {
+  generateSignature(digitalId, timestamp, secret) {
     const data = `${digitalId}-${timestamp}`;
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
-    return crypto.createHmac('sha256', secret).update(data).digest('hex').substring(0, 32);
+    return crypto.createHmac('sha256', secret).update(data).digest('hex');
   }
 
   /**
    * Generate JWT token for secure verification
    */
   generateVerificationToken(user) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET not configured');
+
     return jwt.sign(
       {
+        id: user._id || user.id,
         digitalId: user.digitalId,
-        userId: user._id,
         type: 'verification'
       },
-      process.env.JWT_SECRET,
+      secret,
       { expiresIn: '24h' }
     );
   }
@@ -75,22 +68,15 @@ class VerificationService {
         };
       }
 
-      // Verify checksum
-      const expectedChecksum = this.generateChecksum(qrData.digitalId, qrData.issuedAt);
-      if (qrData.checksum !== expectedChecksum) {
-        return {
-          isValid: false,
-          error: 'QR Code has been tampered with',
-          errorCode: 'TAMPERED'
-        };
-      }
-
       // Verify signature
-      const expectedSignature = this.generateSignature(qrData.digitalId, qrData.issuedAt);
+      const secret = process.env.JWT_SECRET;
+      if (!secret) throw new Error('JWT_SECRET not configured');
+
+      const expectedSignature = this.generateSignature(qrData.digitalId, qrData.issuedAt, secret);
       if (qrData.signature !== expectedSignature) {
         return {
           isValid: false,
-          error: 'Invalid digital signature',
+          error: 'Access Denied: Invalid digital signature',
           errorCode: 'INVALID_SIGNATURE'
         };
       }

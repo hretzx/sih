@@ -9,7 +9,7 @@ echo "=================================================="
 # Check if we're in the right directory
 if [ ! -f "package.json" ]; then
     echo "❌ Error: Not in backend directory"
-    echo "Please run from: /home/DevCrewX/Projects/sih/2/smart-tourist-safety-system/backend"
+    echo "Please run this script from the backend directory."
     exit 1
 fi
 
@@ -49,5 +49,4 @@ echo "🚀 LAUNCHING SMART TOURIST SAFETY SYSTEM..."
 echo ""
 
 # Start the server
-cd /home/DevCrewX/Projects/sih/2/smart-tourist-safety-system/backend
 node server.js

@@ -29,19 +29,15 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: [
-        "'self'", 
-        "'unsafe-inline'", 
-        "https://cdn.socket.io",
-        "https://unpkg.com"
-      ],
-      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: [
-        "'self'", 
-        "ws://10.5.120.254:5000",
-        "wss://10.5.120.254:5000",
-        "http://10.5.120.254:5000"
+        "'self'",
+        process.env.WS_URL || "ws://localhost:5000",
+        process.env.WSS_URL || "wss://localhost:5000",
+        process.env.API_BASE_URL || "http://localhost:5000"
       ]
     }
   }
@@ -122,33 +118,64 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Legacy routes (remove these once new auth routes are working)
-app.post('/api/auth/register', (req, res) => {
-  res.json({ message: 'Use POST /api/auth/register instead' });
+// Safe API Routes
+app.post('/api/location/update', auth, async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+    await User.findByIdAndUpdate(req.user._id, {
+      lastLocation: {
+        type: 'Point',
+        coordinates: [longitude, latitude],
+        timestamp: new Date()
+      }
+    });
+    res.json({ success: true, message: 'Location updated' });
+  } catch (err) {
+    console.error('Error updating location:', err);
+    res.status(500).json({ success: false, message: 'Failed to update location' });
+  }
 });
 
-app.post('/api/auth/login', (req, res) => {
-  res.json({ message: 'Use POST /api/auth/login instead' });
-});
+app.post('/api/emergency/alert', auth, async (req, res) => {
+  try {
+    const { type, location, message } = req.body;
+    const alert = await Alert.create({
+      tourist: req.user._id,
+      type: type || 'panic',
+      location: {
+        type: 'Point',
+        coordinates: [location.longitude, location.latitude]
+      },
+      message
+    });
+    
+    // Broadcast to admins via socket
+    socketHandler.broadcastToAdmins('emergency_alert', {
+      alertId: alert._id,
+      userId: req.user._id,
+      digitalId: req.user.digitalId,
+      type: 'EMERGENCY',
+      emergencyType: type || 'panic',
+      location,
+      timestamp: alert.createdAt,
+      status: 'ACTIVE',
+      message: message || 'Emergency alert triggered'
+    });
 
-// Tourist routes (placeholder)
-app.get('/api/tourist/profile', (req, res) => {
-  // TODO: Get tourist profile
-  res.json({ message: 'Tourist profile endpoint - Coming soon!' });
-});
-
-// Emergency routes (placeholder)
-app.post('/api/emergency/panic', (req, res) => {
-  // TODO: Handle panic button
-  res.json({ message: 'Panic button endpoint - Coming soon!' });
+    res.status(201).json({ success: true, alertId: alert._id });
+  } catch (err) {
+    console.error('Error triggering alert:', err);
+    res.status(500).json({ success: false, message: 'Failed to trigger alert' });
+  }
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
-    error: 'Something went wrong!',
-    message: err.message
+    success: false,
+    message: 'Internal Server Error',
+    error: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
   });
 });
 

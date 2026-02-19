@@ -38,6 +38,17 @@ REGISTER=$(curl -s -X POST http://localhost:5000/api/auth/register \
 
 if [ "$REGISTER" = '"success":true' ]; then
     echo "✅ User Registration: WORKING"
+    # Check if Digital ID was generated
+    DIGITAL_ID=$(curl -s -X POST http://localhost:5000/api/auth/register \
+      -H "Content-Type: application/json" \
+      -d '{"name":"Verify ID","email":"verify@id.com","password":"test123","phone":"9876543210","emergencyContact":"1234567890"}' \
+      | grep -o '"digitalId":"TID[^"]*"')
+    if [ -n "$DIGITAL_ID" ]; then
+        echo "✅ Digital ID Generation: PASS ($DIGITAL_ID)"
+    else
+        echo "❌ Digital ID Generation: FAILED"
+        exit 1
+    fi
 else
     echo "❌ User Registration: FAILED"
     exit 1
@@ -59,7 +70,8 @@ fi
 # Test 5: Socket.IO Real-time System
 echo ""
 echo "🔍 Test 5: Socket.IO Real-time System"
-cd /home/DevCrewX/Projects/sih/2/smart-tourist-safety-system/backend
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
 timeout 10s node test-socket.js > /tmp/socket_test.log 2>&1
 if grep -q "Socket.IO connection test successful" /tmp/socket_test.log; then
     echo "✅ Real-time Communication: WORKING"

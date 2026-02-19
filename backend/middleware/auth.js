@@ -21,8 +21,7 @@ const auth = async (req, res, next) => {
     }
 
     // Verify token
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Find user by ID from token
     const user = await User.findById(decoded.id).select('-password');
@@ -88,8 +87,7 @@ const optionalAuth = async (req, res, next) => {
       return next();
     }
 
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id).select('-password');
     
@@ -224,11 +222,9 @@ const createRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
  * Utility function for creating tokens
  */
 const generateToken = (userId, expiresIn = '7d') => {
-  const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-  
   return jwt.sign(
     { id: userId },
-    JWT_SECRET,
+    process.env.JWT_SECRET,
     { expiresIn }
   );
 };
@@ -238,8 +234,7 @@ const generateToken = (userId, expiresIn = '7d') => {
  * Utility function for token verification
  */
 const verifyToken = (token) => {
-  const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-  return jwt.verify(token, JWT_SECRET);
+  return jwt.verify(token, process.env.JWT_SECRET);
 };
 
 module.exports = {
