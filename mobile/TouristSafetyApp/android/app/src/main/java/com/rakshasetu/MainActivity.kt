@@ -1,9 +1,10 @@
-package com.raksha.setu
+package com.rakshasetu
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import android.os.Bundle
 
 class MainActivity : ReactActivity() {
 
@@ -12,6 +13,11 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "RakshaSetu"
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    android.util.Log.d("RakshaSetu", "MainActivity.onCreate - Launching!")
+    super.onCreate(null)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

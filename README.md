@@ -92,6 +92,11 @@ A comprehensive digital ecosystem for ## 💯 **FINAL DEVELOPMENT PROGRESS** - *
 
 ## 📋 **QUICK START - SIH 2025 DEMO**
 
+### **💻 Windows Development & Optimization**
+For developers on Windows, please refer to the **[Windows Development Report](WINDOWS_DEV_REPORT.md)**. 
+- **Automated Setup**: Run `npm run setup:windows` in the `mobile/TouristSafetyApp` directory to automatically bypass path limits and verify your NDK.
+- **Path Mitigation**: Always use a short path (e.g., `C:\dev`) or follow the virtual drive mapping guide in the report.
+
 ### **Start Demo System:**
 ```bash
 # 1. Start Backend Server
