@@ -112,7 +112,7 @@
         // Initialize map
         function initMap() {
             // Center on India (default location if no user locations available)
-            map = L.map('map').setView([20.5937, 78.9629], 5);
+            map = L.map('map').setView([19.0760, 72.8777], 12);
             
             // Add tile layer
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -206,7 +206,7 @@
             // Authenticate as admin with demo token
             addLog('🔐 Sending authentication...');
             socket.emit('authenticate', {
-                token: 'admin-demo-token', // Demo token now handled properly
+                token: localStorage.getItem('token'), // Demo token now handled properly
                 userType: 'admin'
             });
         });
